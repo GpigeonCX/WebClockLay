@@ -1,0 +1,362 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <title>员工信息管理</title>
+    <script src="~/Scripts/jquery-3.3.1.js"></script>
+    <script src="~/Scripts/jquery-3.3.1.min.js"></script>
+    <link href="~/Scripts/layui-v2.4.5/layui/css/layui.css" rel="stylesheet" />
+    <script src="~/Scripts/layui-v2.4.5/layui/layui.all.js"></script>
+    <style>
+        body {
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-form-item">
+        <div class="layui-inline">
+            <label class="layui-form-label">工号</label>
+            <div class="layui-input-inline">
+                <input type="tel" name="CardId" id="CardId" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+
+        <div class="layui-inline">
+            <label class="layui-form-label">班级</label>
+            @*<div class="layui-input-block">
+                    <select name="ClassName" id="ClassName" lay-filter="aihao">
+                    </select>
+                </div>*@
+            <div class="layui-input-inline">
+                <input type="text" name="ClassName" id="ClassName" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-inline">
+            <label class="layui-form-label">名称</label>
+            <div class="layui-input-inline">
+                <input type="text" name="EmployeeName" id="EmployeeName" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <button class="layui-btn" id="btnSelect">搜索</button>
+        <button class="layui-btn layui-btn-danger" id="btnClock">立即打卡</button>
+    </div>
+    <table class="layui-hide" id="demo" lay-filter="test"></table>
+
+    <script type="text/html" id="barDemo">
+        <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="detail">查看</a>
+        <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+        <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del" id="btndel">删除</a>
+    </script>
+
+    @* <blockquote class="layui-elem-quote layui-quote-nm layui-hide" id="footer">layui {{ layui.v }} 提供强力驱动</blockquote>*@
+
+
+    <script>
+        layui.use(['laydate', 'laypage', 'layer', 'table', 'carousel', 'upload', 'element', 'slider'], function () {
+            var laydate = layui.laydate //日期
+                , laypage = layui.laypage //分页
+                , layer = layui.layer //弹层
+                , table = layui.table //表格
+            table.render({
+                elem: '#demo'
+                , height: 420
+                , url: '/home/GetEmployee' //数据接口
+                , title: '用户表'
+                , page: true //开启分页
+                , toolbar: 'default' //开启工具栏，此处显示默认图标，可以自定义模板，详见文档
+                , height: 'full-100'
+                , limit: 30
+                , where: {
+                    CardId: $("#CardId").val(),
+                    ClassName: $("#ClassName").val(),
+                    EmployeeName: $("#EmployeeName").val()
+                } //如果无需传递额外参数，可不加该参数
+                , cols: [[ //表头
+                    { type: 'numbers', sort: true }
+                    , { type: 'checkbox'/*, fixed: 'left'*/ }
+                    //, { field: 'guid', title: 'ID', width: 80, sort: true }
+                    , { field: 'CardId', title: '工号', width: 180 }
+                    , { field: 'EmployeeName', title: '名称', width: 80, sort: true }
+                    , {
+                        field: 'ClockState', title: '状态', width: 70, sort: true, templet: function (d) {
+                            return d.ClockState == false ? "失败" : "<span style='color: red;'>成功</span>";
+                        }
+                    }
+                    , { field: 'ClassName', title: '班级', width: 70, sort: true, totalRow: true }
+                    , {
+                        field: 'StartClockTime', title: '开始时间', width: 100, sort: true, templet: function (d) {
+                            return d.StartClockTime.slice(-7);
+                        }// }, templet: function (d) { //return DateTimeFormatter(d.StartClockTime); }
+                    }
+                    , { field: 'Times', title: '完成次数', width: 50, sort: true, totalRow: true }
+                    , {
+                        field: 'LastClockTime', title: '上次打卡时间', width: 130, sort: true, templet: function (d) {
+                            return d.LastClockTime.replace("2019", "");
+                        }
+                    }
+                    , { field: 'FailedReason', title: '失败原因', width: 500, sort: true }
+                    //, { fixed: 'right', width: 165, align: 'center', toolbar: '#barDemo' }
+                ]]
+            });
+            //格式化开始时间
+            laydate.render({
+                elem: '#AddStartTime'
+                , type: 'time'
+                , format: 'HH:mm'
+            });
+            //监听头工具栏事件
+            table.on('toolbar(test)', function (obj) {
+                var checkStatus = table.checkStatus(obj.config.id)
+                    , alldata = checkStatus.data; //获取选中的数据
+                switch (obj.event) {
+                    case 'add':
+                        layer.open({
+                            type: 1,
+                            content: $('#addDialog'), //这里content是一个DOM，注意：最好该元素要存放在body最外层，否则可能被其它的相对元素所影响
+                            offset: 'auto'
+                            , btn: ['添加']
+                            , yes: function (index, layero) {
+                                $("#addDialog").show();
+                                //var postData = $("#addform").serializeArray();
+                                //Ajax异步实现加载
+                                $.ajax({
+                                    url: "/Home/Add?r=" + Math.random(),
+                                    data: {
+                                        //CardId: $("#AddCardId").val(),
+                                        //EmployeeName: $("#AddEmployeeName").val(),
+                                        AddClassName: $("#AddClassName").val(),
+                                        AddInfo: $("#AddInfo").val(),
+                                        AddStartTime: $("#AddStartTime").val(),
+                                    },
+                                    type: "post",
+                                    success: function (data) {
+                                        if (data == "OK") {
+                                            reload();
+                                            $("#AddCardId").val('');
+                                            $("#AddEmployeeName").val('');
+                                            $("#AddClassName").val('');
+                                            layer.close(index);
+                                            layer.msg('添加成功');
+                                            style = "display: none;"
+                                            $("#addDialog").hide();
+                                        }
+                                        else {
+                                            layer.msg(data);
+                                        }
+                                    }
+                                })
+                            }
+                            , cancel: function (index, layero) {
+                                layer.close(index)
+                                $("#addDialog").hide();//隐藏div
+                            }
+                        });
+                        break;
+                    case 'update':
+                        if (alldata.length === 0) {
+                            layer.msg('请选择一行');
+                        } else if (alldata.length > 1) {
+                            layer.msg('只能同时编辑一个');
+                        } else {
+                            $("#EditCardId").val(checkStatus.data[0].CardId);
+                            $("#EditEmployeeName").val(checkStatus.data[0].EmployeeName);
+                            $("#EditClassName").val(checkStatus.data[0].ClassName);
+                            $("#EditStartTime").val(checkStatus.data[0].StartClockTime.slice(-7));
+                            debugger;
+                            layer.open({
+                                type: 1,
+                                content: $('#EditDialog'), //这里content是一个DOM，注意：最好该元素要存放在body最外层，否则可能被其它的相对元素所影响
+                                offset: 'auto'
+                                , btn: ['修改']
+                                , yes: function (index, layero) {
+                                    $("#EditDialog").show();
+                                    $.ajax({
+                                        url: "/Home/Edit?r=" + Math.random(),
+                                        data: {
+                                            guid: checkStatus.data[0].guid,
+                                            EditCardId: $("#EditCardId").val(),
+                                            EditEmployeeName: $("#EditEmployeeName").val(),
+                                            EditClassName: $("#EditClassName").val(),
+                                            EditStartTime: $("#EditStartTime").val(),
+                                        },
+                                        type: "post",
+                                        success: function (data) {
+                                            if (data == "OK") {
+                                                reload();
+                                                //$("#AddCardId").val('');
+                                                //$("#AddEmployeeName").val('');
+                                                //$("#AddClassName").val('');
+                                                layer.close(index);
+                                                layer.msg('修改成功');
+                                                style = "display: none;"
+                                                $("#EditDialog").hide();
+                                            }
+                                            else {
+                                                layer.msg(data);
+                                            }
+                                        }
+                                    })
+                                }
+                                , cancel: function (index, layero) {
+                                    layer.close(index)
+                                    $("#EditDialog").hide();//隐藏div
+                                }
+                            });
+                        }
+                        break;
+                    case 'delete':
+                        if (alldata.length <= 0) {
+                            layer.msg('请至少选择一行');
+                        } else {
+                            var guids = "";
+                            for (var i = alldata.length - 1; i >= 0; i--) {
+                                guids += ',' + checkStatus.data[i].guid;
+                            }
+                            $.post("/Home/Delete?r=" + Math.random(), { Id: guids }, function (data) {
+                                if (data == "OK") {
+                                    layer.msg('删除成功');
+                                    reload();
+                                }
+                                else {
+                                    layer.msg('删除失败');
+                                }
+                            });
+
+                        }
+                        break;
+                };
+            });
+
+            //监听行工具事件
+            table.on('tool(test)', function (obj) { //注：tool 是工具条事件名，test 是 table 原始容器的属性 lay-filter="对应的值"
+                var data = obj.data //获得当前行数据
+                    , layEvent = obj.event; //获得 lay-event 对应的值
+                if (layEvent === 'detail') {
+                    layer.msg('查看操作');
+                } else if (layEvent === 'del') {
+                    layer.confirm('真的删除行么', function (index) {
+                        //obj.del(); //删除对应行（tr）的DOM结构
+                        //layer.close(index);
+                        layer.msg('删除操作');
+                        //向服务端发送删除指令
+                    });
+                } else if (layEvent === 'edit') {
+                    layer.msg('编辑操作');
+                }
+            });
+            $("#btnSelect").click(function () {
+                reload();
+            })
+            $("#btnClock").click(function () {
+                var checkStatus = table.checkStatus('demo')
+                    , alldata = checkStatus.data; //获取选中的数据
+
+                if (alldata.length <= 0) {
+                    layer.msg('请至少选择一行');
+                } else {
+                    var guids = "";
+                    for (var i = alldata.length - 1; i >= 0; i--) {
+                        guids += ',' + checkStatus.data[i].guid;
+                    }
+                    $.post("/Home/ClockGo?r=" + Math.random(), { Id: guids }, function (data) {
+                        if (data == "OK") {
+                            layer.msg('操作完成！请稍等待后刷新页面查看结果！');
+                            reload();
+                        }
+                        else {
+                            layer.msg(data);
+                        }
+                    });
+
+                }
+            })
+            function reload() {
+                table.reload('demo', {
+                    where: { //设定异步数据接口的额外参数，任意设
+                        CardId: $("#CardId").val(),
+                        ClassName: $("#ClassName").val(),
+                        EmployeeName: $("#EmployeeName").val()
+                    }
+                });
+            }
+            // LoadSelect();
+        });
+        function DateTimeFormatter(value) {
+            var date = new Date(value);
+            var hour = date.getHours();
+            var minutes = date.getMinutes();
+            minutes = minutes < 10 ? "0" + minutes : minutes
+            return hour + ":" + minutes;
+        }
+        function LoadSelect() {
+            $.ajax(
+                {
+                    type: "POST",
+                    url: "/Home/GetSelect?r=" + Math.random(),
+                    dataTpye: "json",
+                    success: function (data) {
+                        debugger;
+                        var root = $("#ClassName");
+                        for (var i = 0; i < data.length; i++) {
+                            var option = document.createElement("option");
+                            option.setAttribute("value", data[i]);
+                            option.innerText = data[i];
+                            root.append(option);
+                            form.render('select');
+                        }
+                    }
+                }
+            );
+
+        }
+    </script>
+    <div id="addDialog" style="width: 300px; height:120px; padding: 10px 20px; display:none">
+        @*<label class="layui-form-label">工号</label>
+            <div class="layui-input-inline">
+                <input type="text" name="AddCardId" id="AddCardId" autocomplete="off" class="layui-input">
+            </div>
+            <label class="layui-form-label">名称</label>
+            <div class="layui-input-inline">
+                <input type="text" name="AddEmployeeName" id="AddEmployeeName" autocomplete="off" class="layui-input">
+            </div>
+        *@
+        <label class="layui-form-label">添加用户</label>
+        <div class="layui-input-block">
+            <textarea placeholder="工号-名称,工号-名称,工号-名....." id="AddInfo" class="layui-textarea"></textarea>
+        </div>
+        <label class="layui-form-label">班级</label>
+        <div class="layui-input-inline">
+            <input type="text" name="AddClassName" id="AddClassName" autocomplete="off" class="layui-input">
+        </div>
+        <label class="layui-form-label">开始时间</label>
+        <div class="layui-input-inline">
+            <input type="text" class="layui-input" id="AddStartTime" placeholder="HH:mm">
+        </div>
+    </div>
+    <div id="EditDialog" style="width: 300px; height:120px; padding: 10px 20px; display:none">
+        <label class="layui-form-label">工号</label>
+        <div class="layui-input-inline">
+            <input type="text" name="EditCardId" id="EditCardId" autocomplete="off" class="layui-input">
+        </div>
+        <label class="layui-form-label">名称</label>
+        <div class="layui-input-inline">
+            <input type="text" name="EditEmployeeName" id="EditEmployeeName" autocomplete="off" class="layui-input">
+        </div>
+        <label class="layui-form-label">班级</label>
+        <div class="layui-input-inline">
+            <input type="text" name="EditClassName" id="EditClassName" autocomplete="off" class="layui-input">
+        </div>
+        <label class="layui-form-label">开始时间</label>
+        <div class="layui-input-inline">
+            <input type="text" class="layui-input" id="EditStartTime" placeholder="HH:mm">
+        </div>
+    </div>
+
+</body>
+</html>
