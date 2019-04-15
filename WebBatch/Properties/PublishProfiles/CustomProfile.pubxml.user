@@ -6,7 +6,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <TimeStampOfAssociatedLegacyPublishXmlFile />
-    <_PublishTargetUrl>F:\WebBatch\发布</_PublishTargetUrl>
+    <_PublishTargetUrl>F:\GitHub\WebBatch发布</_PublishTargetUrl>
   </PropertyGroup>
   <ItemGroup>
     <File Include="ApplicationInsights.config">
@@ -229,10 +229,10 @@
       <publishTime>02/01/2018 12:20:56</publishTime>
     </File>
     <File Include="bin/WebBatch.dll">
-      <publishTime>04/02/2019 22:21:48</publishTime>
+      <publishTime>04/15/2019 21:01:07</publishTime>
     </File>
     <File Include="bin/WebBatch.pdb">
-      <publishTime>04/02/2019 22:21:48</publishTime>
+      <publishTime>04/15/2019 21:01:07</publishTime>
     </File>
     <File Include="bin/WebGrease.dll">
       <publishTime>01/23/2014 13:57:34</publishTime>
@@ -703,7 +703,7 @@
       <publishTime>03/23/2019 13:40:01</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>04/02/2019 22:36:11</publishTime>
+      <publishTime>04/03/2019 20:51:40</publishTime>
     </File>
   </ItemGroup>
 </Project>

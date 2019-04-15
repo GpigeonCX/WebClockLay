@@ -89,7 +89,7 @@ namespace WebBatch.Controllers
                             StartClockTime = StartTime,
                             LastClockTime = Convert.ToDateTime("2000-1-1 00:00"),
                             ClockState = false,
-                            FailedReason = "新增的数据，还没有打卡记录！",
+                            FailedReason = "新增的数据，还没有打卡记录！"+DateTime.Now.ToString(),
                             flag = true
                         };
                         Db.ClockBatch.Add(model);
@@ -198,7 +198,7 @@ namespace WebBatch.Controllers
                         catch (Exception)
                         {
                             model.ClockState = false;
-                            model.FailedReason = strResult;
+                            model.FailedReason += strResult;
                             Db.ClockBatch.Attach(model);
                             Db.Entry<ClockBatch>(model).State = EntityState.Modified;
                             Db.SaveChanges();
@@ -208,18 +208,19 @@ namespace WebBatch.Controllers
                         foreach (var item in studentsList)
                         {
                             //找到班级名称对应的班级ID 放入班级ID字典  从右边取10个字符，然后正则取纯数字。OS：我是被逼的
-                            if (ClassName.Equals(System.Text.RegularExpressions.Regex.Replace(item["tname"].ToString().Remove(0, item["tname"].ToString().Length - 10), @"[^0-9]+", "")))
+                            //if (ClassName.Equals(System.Text.RegularExpressions.Regex.Replace(item["tname"].ToString().Remove(0, item["tname"].ToString().Length - 10), @"[^0-9]+", "")))
+                            if(ClassName.Equals(Regex.Replace(item["tname"].ToString().Replace("2019",""), @"[^0-9]+", "")))
                             {
                                 if (!_dicClassID.ContainsKey(model.ClassName))
                                 {
-                                    _dicClassID.Add(ClassName, item["id"].ToString());
+                                    _dicClassID.Add(model.ClassName, item["id"].ToString());
                                     break;
                                 }
                             };
                         }
-                        if (!_dicClassID.ContainsKey(ClassName))
+                        if (!_dicClassID.ContainsKey(model.ClassName))
                             return Json($"打卡失败，该工号{model.CardId}没有找到对应的班级，请检查！");
-                        var response2 = HttpPost(posturl2, "class_id=" + _dicClassID[ClassName]
+                        var response2 = HttpPost(posturl2, "class_id=" + _dicClassID[model.ClassName]
                          , new Dictionary<string, string>()
                          {
                             { "cookie", _dicCookie[string.Format("idcard={0}",model.CardId)] }
@@ -235,11 +236,11 @@ namespace WebBatch.Controllers
                             Db.SaveChanges();
                             Thread.Sleep(new Random().Next(3000, 8000));
                         }
-                        else if ((JObject.Parse(response2).ToString().Contains("已签到")))
+                        else if ((JObject.Parse(response2).ToString().Contains("已签")))
                         {
                             model.LastClockTime = DateTime.Now;   //返回是已签到也更新上次打卡时间4.2
                             model.ClockState = false;
-                            model.FailedReason = JObject.Parse(response2)["msg"].ToString() + DateTime.Now.ToString();
+                            model.FailedReason += JObject.Parse(response2)["msg"].ToString() + DateTime.Now.ToString();
                             Db.ClockBatch.Attach(model);
                             Db.Entry<ClockBatch>(model).State = EntityState.Modified;
                             Db.SaveChanges();
@@ -247,7 +248,7 @@ namespace WebBatch.Controllers
                         else
                         {
                             model.ClockState = false;
-                            model.FailedReason = JObject.Parse(response2)["msg"].ToString() + DateTime.Now.ToString();
+                            model.FailedReason += JObject.Parse(response2)["msg"].ToString() + DateTime.Now.ToString();
                             Db.ClockBatch.Attach(model);
                             Db.Entry<ClockBatch>(model).State = EntityState.Modified;
                             Db.SaveChanges();
@@ -258,7 +259,7 @@ namespace WebBatch.Controllers
                     else
                     {
                         model.ClockState = false;
-                        model.FailedReason = strResult;
+                        model.FailedReason += strResult;
                         Db.ClockBatch.Attach(model);
                         Db.Entry<ClockBatch>(model).State = EntityState.Modified;
                         Db.SaveChanges();
